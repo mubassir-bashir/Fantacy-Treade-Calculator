@@ -30,10 +30,14 @@ export async function GET(request) {
       from += pageSize
     }
 
+    function getMultiplier(position) {
+      return position === 'QB' ? 20 : 30
+    }
+
     const updates = players.map((player) => {
       const playerStats = stats[player.id]
       const points = playerStats?.pts_ppr || 0
-      const value = Math.round(points * 25) + 100
+      const value = Math.round(points * getMultiplier(player.position)) + 100
       return { id: player.id, value }
     })
 

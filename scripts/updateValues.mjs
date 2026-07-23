@@ -37,20 +37,18 @@ async function updateValues() {
 
   console.log(`${players.length} players ke values calculate ho rahe hain...`)
 
-  const updates = players.map((player) => {
-    const playerStats = stats[player.id]
-    const points = playerStats?.pts_ppr || 0
-
-    // Simple formula: points ko scale kar ke ek value banate hain
-    // Jitne zyada points, utni zyada value. Minimum value 100 rakhte hain
-    // taake bench players bhi kuch value rakhein (0 na ho)
-    const value = Math.round(points * 25) + 100
-
-    return {
-      id: player.id,
-      value: value,
+  // QBs naturally rack up more raw points, so they get a lower multiplier —
+    // this reflects real market scarcity where RB/WR/TE are harder to replace
+    function getMultiplier(position) {
+      return position === 'QB' ? 20 : 30
     }
-  })
+
+    const updates = players.map((player) => {
+      const playerStats = stats[player.id]
+      const points = playerStats?.pts_ppr || 0
+      const value = Math.round(points * getMultiplier(player.position)) + 100
+      return { id: player.id, value }
+    })
 
   // Pehle current values ko history me save karo (naya update karne se pehle)
   console.log('Old values storing in history...')
