@@ -19,17 +19,21 @@ export async function GET(request) {
     dbQuery = dbQuery.ilike('full_name', `%${query}%`)
   }
 
-  const { data, error } = await dbQuery
+  const { data, error } = await supabase
+    .from('players')
+    .select('id, full_name, position, team, age, value, dynasty_value')
+    .ilike('full_name', `%${query}%`)
+    .order('value', { ascending: false })
+    .limit(query.length >= 1 ? 10 : 100)
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  const adjusted = data.map((p) => ({
-    ...p,
-    baseValue: p.value,
-    value: getAdjustedValue(p.value, p, settings),
-  }))
+  const adjusted = data.map((p) => {
+    const source = settings.mode === 'dynasty' ? p.dynasty_value : p.value
+    return { ...p, baseValue: source, value: getAdjustedValue(source, p, settings) }
+  })
 
   return NextResponse.json(adjusted)
 }

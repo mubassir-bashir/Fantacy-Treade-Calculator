@@ -8,6 +8,7 @@ export async function GET(request) {
   const gap = Number(searchParams.get('gap')) || 0
   const excludeIds = (searchParams.get('exclude') || '').split(',').filter(Boolean)
   const settings = parseSettings(searchParams)
+  const valueColumn = settings.mode === 'dynasty' ? 'dynasty_value' : 'value'
 
   if (gap <= 0) {
     return NextResponse.json([])
@@ -19,9 +20,9 @@ export async function GET(request) {
 
   let query = supabase
     .from('players')
-    .select('id, full_name, position, team, age, value')
-    .gte('value', minValue)
-    .lte('value', maxValue)
+    .select(`id, full_name, position, team, age, ${valueColumn}`)
+    .gte(valueColumn, minValue)
+    .lte(valueColumn, maxValue)
     .limit(200)
 
   if (excludeIds.length > 0) {
@@ -34,7 +35,10 @@ export async function GET(request) {
   }
 
   const adjusted = data
-    .map((p) => ({ ...p, baseValue: p.value, value: getAdjustedValue(p.value, p, settings) }))
+    .map((p) => {
+      const source = p[valueColumn]
+      return { ...p, baseValue: source, value: getAdjustedValue(source, p, settings) }
+    })
     .filter((p) => p.value >= gap * 0.85 && p.value <= gap * 1.15)
     .sort((a, b) => b.value - a.value)
     .slice(0, 5)

@@ -10,7 +10,8 @@ export async function GET(request) {
 
   let query = supabase
     .from('players')
-    .select('id, full_name, position, team, age, value')
+    .select('id, full_name, position, team, age, value, dynasty_value')
+    .order('value', { ascending: false })
     .limit(500)
 
   if (position !== 'ALL') {
@@ -24,7 +25,10 @@ export async function GET(request) {
   }
 
   const adjusted = data
-    .map((p) => ({ ...p, baseValue: p.value, value: getAdjustedValue(p.value, p, settings) }))
+    .map((p) => {
+      const source = settings.mode === 'dynasty' ? p.dynasty_value : p.value
+      return { ...p, baseValue: source, value: getAdjustedValue(source, p, settings) }
+    })
     .sort((a, b) => b.value - a.value)
     .slice(0, 200)
 

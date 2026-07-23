@@ -263,7 +263,7 @@ export default function TradeCalculator() {
           </div>
 
           <div className="flex items-center gap-4">
-            <SettingField label="League Size" value={leagueSize} onChange={setLeagueSize} options={[8, 10, 12, 14, 16]} />
+            <SettingField label="League Size" value={leagueSize} onChange={setLeagueSize} options={[8, 10, 12, 14]} />
             <SettingField label="PPR" value={ppr} onChange={setPpr} options={[0, 0.5, 1]} />
             <SettingField label="TEP" value={tep} onChange={setTep} options={['Off', '0.5', '1']} />
             <div className="flex items-center gap-2">
