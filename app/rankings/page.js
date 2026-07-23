@@ -11,15 +11,29 @@ export default function Rankings() {
   const [position, setPosition] = useState('ALL')
   const [loading, setLoading] = useState(true)
 
+  const [mode, setMode] = useState('redraft')
+  const [leagueSize, setLeagueSize] = useState(12)
+  const [ppr, setPpr] = useState(1)
+  const [tep, setTep] = useState('Off')
+  const [superflex, setSuperflex] = useState(false)
+
   useEffect(() => {
     setLoading(true)
-    fetch(`/api/rankings?position=${position}`)
+    const params = new URLSearchParams({
+      position,
+      mode,
+      superflex: String(superflex),
+      tep,
+      ppr: String(ppr),
+      leagueSize: String(leagueSize),
+    })
+    fetch(`/api/rankings?${params}`)
       .then((res) => res.json())
       .then((data) => {
         setPlayers(data)
         setLoading(false)
       })
-  }, [position])
+  }, [position, mode, superflex, tep, ppr, leagueSize])
 
   return (
     <div className="min-h-screen bg-white text-[#1A1D29]">
@@ -37,19 +51,53 @@ export default function Rankings() {
         <h1 className="text-3xl font-bold tracking-tight mb-1">Player Rankings</h1>
         <p className="text-sm text-gray-500 mb-6">Values generated from real player performance data.</p>
 
-        {/* Position tabs */}
-        <div className="flex gap-1 bg-gray-100 rounded-lg p-1 w-fit mb-6">
-          {POSITIONS.map((pos) => (
-            <button
-              key={pos}
-              onClick={() => setPosition(pos)}
-              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                position === pos ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {pos}
-            </button>
-          ))}
+        <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
+          {/* Position tabs */}
+          <div className="flex gap-1 bg-gray-100 rounded-lg p-1 w-fit">
+            {POSITIONS.map((pos) => (
+              <button
+                key={pos}
+                onClick={() => setPosition(pos)}
+                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  position === pos ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                {pos}
+              </button>
+            ))}
+          </div>
+
+          {/* League settings — must match trade-calculator so values agree */}
+          <div className="flex items-center gap-4">
+            <div className="flex bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setMode('redraft')}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${mode === 'redraft' ? 'bg-blue-600 text-white' : 'text-gray-500'}`}
+              >
+                Redraft
+              </button>
+              <button
+                onClick={() => setMode('dynasty')}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${mode === 'dynasty' ? 'bg-blue-600 text-white' : 'text-gray-500'}`}
+              >
+                Dynasty
+              </button>
+            </div>
+            <SettingField label="League Size" value={leagueSize} onChange={setLeagueSize} options={[8, 10, 12, 14]} />
+            <SettingField label="PPR" value={ppr} onChange={setPpr} options={[0, 0.5, 1]} />
+            <SettingField label="TEP" value={tep} onChange={setTep} options={['Off', '0.5', '1']} />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setSuperflex(!superflex)}
+                className={`w-10 h-6 rounded-full transition-colors relative shrink-0 ${superflex ? 'bg-blue-600' : 'bg-gray-300'}`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${superflex ? 'translate-x-4' : 'translate-x-0'}`}
+                />
+              </button>
+              <span className="text-xs text-gray-500">Superflex</span>
+            </div>
+          </div>
         </div>
 
         {/* Table */}
@@ -83,6 +131,21 @@ export default function Rankings() {
           ))}
         </div>
       </div>
+    </div>
+  )
+}
+
+function SettingField({ label, value, onChange, options }) {
+  return (
+    <div className="flex flex-col">
+      <span className="text-[10px] text-gray-400 uppercase tracking-wide">{label}</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(isNaN(e.target.value) ? e.target.value : Number(e.target.value))}
+        className="text-sm font-medium border border-gray-200 rounded-md px-2 py-1 outline-none focus:border-blue-500 bg-white cursor-pointer"
+      >
+        {options.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+      </select>
     </div>
   )
 }

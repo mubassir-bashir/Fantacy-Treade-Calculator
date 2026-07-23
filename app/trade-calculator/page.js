@@ -85,7 +85,13 @@ export default function TradeCalculator() {
     setResults(data)
   }
 
+  // FIX: no longer blindly appends — checks for a duplicate id first
   function addPlayer(player, team, setTeam, setSearch, setResults) {
+    if (team.some((p) => p.id === player.id)) {
+      setSearch('')
+      setResults([])
+      return
+    }
     setTeam([...team, player])
     setSearch('')
     setResults([])
@@ -189,10 +195,36 @@ export default function TradeCalculator() {
     }
   }, [team1, team2])
 
+  // FIX: re-prices already-added players from the server (live FantasyCalc values)
+  // whenever league settings change, instead of recomputing locally with stale baseValue.
+  // Dependencies are ONLY the settings — never team1/team2 here, or this becomes an infinite loop.
   useEffect(() => {
-    const settings = { mode, superflex, tep, ppr, leagueSize }
-    setTeam1((prev) => prev.map((p) => ({ ...p, value: getAdjustedValue(p.baseValue ?? p.value, p, settings) })))
-    setTeam2((prev) => prev.map((p) => ({ ...p, value: getAdjustedValue(p.baseValue ?? p.value, p, settings) })))
+    const allPlayers = [...team1, ...team2]
+    const nonPickIds = allPlayers.filter((p) => p.position !== 'PICK').map((p) => p.id)
+    if (!nonPickIds.length) return
+
+    const params = new URLSearchParams({
+      ids: nonPickIds.join(','),
+      mode,
+      superflex: String(superflex),
+      tep,
+      ppr: String(ppr),
+      leagueSize: String(leagueSize),
+    })
+
+    fetch(`/api/values?${params}`)
+      .then((res) => res.json())
+      .then((updates) => {
+        const applyUpdate = (p) => {
+          if (p.position === 'PICK') return p
+          const update = updates[p.id]
+          return update ? { ...p, baseValue: update.baseValue, value: update.value } : p
+        }
+        setTeam1((prev) => prev.map(applyUpdate))
+        setTeam2((prev) => prev.map(applyUpdate))
+      })
+      .catch((err) => console.error('Re-pricing failed:', err))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, superflex, tep, ppr, leagueSize])
 
   let verdict = null
@@ -368,8 +400,8 @@ export default function TradeCalculator() {
                     <span className="font-semibold">{p.value.toLocaleString()}</span>
                     <button
                       onClick={() => {
-                        if (team1Total <= team2Total) setTeam1([...team1, p])
-                        else setTeam2([...team2, p])
+                        if (team1Total <= team2Total) addPlayer(p, team1, setTeam1, () => {}, () => {})
+                        else addPlayer(p, team2, setTeam2, () => {}, () => {})
                       }}
                       className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition-colors justify-self-end"
                     >
